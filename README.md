@@ -57,42 +57,6 @@ The installation follows FHS / LSB conventions.
 Download the zip file from github and extract all files.
 Make sure all files have the correct owners and permissions.
 
-chown root:root /etc/firewalld/zones/smtp2web.xml  
-chmod 644 /etc/firewalld/zones/smtp2web.xml  
-chown root:root /etc/logrotate.d/smtp2web  
-chmod 644 /etc/logrotate.d/smtp2web  
-chown root:smtp2web /etc/smtp2web  
-chmod 750 /etc/smtp2web  
-chown root:smtp2web /etc/smtp2web/config.json  
-chmod 640 /etc/smtp2web/config.json  
-chown root:smtp2web /etc/smtp2web/certs  
-chmod 750 /etc/smtp2web/certs  
-chown root:smtp2web /etc/smtp2web/certs/*.pem  
-chmod 440 /etc/smtp2web/certs/private.pem  
-chmod 640 /etc/smtp2web/certs/public.pem  
-chmod 640 /etc/smtp2web/certs/rootca.pem  
-chown root:root /etc/systemd/system/smtp2web.service  
-chmod 644 /etc/systemd/system/smtp2web.service  
-chown root:root zip-smtp2web-archives.service  
-chmod 644 zip-smtp2web-archives.service  
-chown root:root /etc/systemd/system/zip-smtp2web-archives.timer  
-chmod 644 /etc/systemd/system/zip-smtp2web-archives.timer  
-chown smtp2web:smtp2web /opt/smtp2web  
-chmod 750 /opt/smtp2web  
-chown smtp2web:smtp2web /opt/smtp2web/*  
-chmod 640 /opt/smtp2web/*  
-chown root:root /usr/local/scripts  
-chmod 755 /usr/local/scripts  
-chown smtp2web:smtp2web /usr/local/scripts/zip-smtp2web-archives.sh  
-chmod 750 /usr/local/scripts/zip-smtp2web-archives.sh  
-chown -R smtp2web:smtp2web /var/lib/smtp2web  
-chmod 750 /var/lib/smtp2web  
-chmod 750 /var/lib/smtp2web/archive  
-chmod 750 /var/lib/smtp2web/spool  
-chmod 750 /var/lib/smtp2web/spool/quarantine  
-chown smtp2web:adm /var/log/smtp2web.log  
-chmod 640 /var/log/smtp2web.log  
-
 ### 4.2 Review configuration
 Edit the configuration file:
 /etc/smtp2web/config.json
