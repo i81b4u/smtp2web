@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone target="DROP">
+  <port port="2525" protocol="tcp"/>
+  <forward-port port="25" protocol="tcp" to-port="2525"/>
+  <source address="192.168.1.0/24"/>
+</zone>

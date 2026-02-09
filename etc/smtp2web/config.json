@@ -1,0 +1,39 @@
+{
+  "smtp": {
+    "name": "smtp2web.company.internal",
+    "listen": "0.0.0.0",
+    "port": 2525,
+    "requireTLS": true,
+    "tls": {
+      "minVersion": "TLSv1.2",
+      "maxVersion": "TLSv1.3",
+      "ciphers": [
+        "TLS_AES_256_GCM_SHA384",
+        "TLS_AES_128_GCM_SHA256"
+      ],
+      "key": "/etc/smtp2web/certs/private.pem",
+      "cert": "/etc/smtp2web/certs/public.pem"
+    }
+  },
+
+  "queue": {
+    "path": "/var/lib/smtp2web/spool",
+    "retryIntervalSeconds": 15,
+    "validateIntervalSeconds": 60
+  },
+
+  "forwarder": {
+    "endpoint": "https://apigateway.company.internal/smtppolicy",
+    "format": "xml",
+    "timeoutSeconds": 5
+  },
+
+  "archive": {
+    "enabled": true,
+    "path": "/var/lib/smtp2web/archive"
+  },
+
+  "log": {
+    "path": "/var/log/smtp2web.log"
+  }
+}

@@ -1,0 +1,10 @@
+/var/log/smtp2web.log {
+	su root smtp2web
+	rotate 4
+	weekly
+	missingok
+	notifempty
+	compress
+	delaycompress
+	create 640 smtp2web adm
+}

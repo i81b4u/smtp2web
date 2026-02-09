@@ -1,0 +1,26 @@
+[Unit]
+Description=Zip smtp2web archives
+# Only start if the script exists
+ConditionPathIsExecutable=/usr/local/scripts/zip-smtp2web-archives.sh
+
+[Service]
+Type=oneshot
+User=smtp2web
+Group=smtp2web
+WorkingDirectory=/var/lib/smtp2web
+
+ExecStart=/usr/local/scripts/zip-smtp2web-archives.sh
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/smtp2web
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+# Fail fast if something goes wrong
+TimeoutStartSec=30min

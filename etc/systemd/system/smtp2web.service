@@ -1,0 +1,26 @@
+[Unit]
+Description=smtp2web SMTP to HTTP bridge
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=smtp2web
+Group=smtp2web
+PrivateUsers=true
+UMask=0027
+WorkingDirectory=/opt/smtp2web
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5s
+Environment=NODE_ENV=production
+Environment=NODE_EXTRA_CA_CERTS=/etc/smtp2web/certs/rootca.pem
+
+[Install]
+WantedBy=multi-user.target
+

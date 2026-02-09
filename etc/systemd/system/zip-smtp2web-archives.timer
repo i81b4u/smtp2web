@@ -1,0 +1,11 @@
+[Unit]
+Description=Zip smtp2web archives timer
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=5min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
