@@ -1,5 +1,6 @@
 const fs = require('fs');
-const config = require('/etc/smtp2web/config.json');
+const path = require('path');
+const config = require('./config');
 
 const LOG_FILE = config.log.path;
 
@@ -13,7 +14,15 @@ function log(level, component, action, message, extra = {}) {
     ...extra
   };
 
-  fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + '\n');
+  try {
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + '\n');
+  } catch (err) {
+    process.stderr.write(JSON.stringify({
+      ...entry,
+      logError: err.message
+    }) + '\n');
+  }
 }
 
 module.exports = {
