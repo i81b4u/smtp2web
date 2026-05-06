@@ -1,6 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
-const config = require('/etc/smtp2web/config.json');
+const config = require('./config');
 
 async function archivePayload(payload) {
   if (!config.archive?.enabled) return;

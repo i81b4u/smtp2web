@@ -1,11 +1,18 @@
 const fs = require('fs/promises');
 const path = require('path');
-const config = require('/etc/smtp2web/config.json');
-const logger = require('/opt/smtp2web/logger');
-const { validateJSON } = require('/opt/smtp2web/validator-core');
+const config = require('./config');
+const logger = require('./logger');
+const { validateJSON } = require('./validator-core');
 
 const SPOOL = config.queue.path;
 const QUARANTINE = path.join(SPOOL, 'quarantine');
+
+let validating = false;
+let validateTimer;
+
+async function ensureQuarantineDir() {
+  await fs.mkdir(QUARANTINE, { recursive: true });
+}
 
 async function validateFile(file) {
   const full = path.join(SPOOL, file);
@@ -17,6 +24,7 @@ async function validateFile(file) {
       throw new Error('JSON validation failed');
     }
   } catch (err) {
+    await ensureQuarantineDir();
     await fs.rename(full, path.join(QUARANTINE, file));
     logger.error('validator', 'quarantine', 'invalid file moved to quarantine', {
       file,
@@ -26,15 +34,39 @@ async function validateFile(file) {
 }
 
 async function runValidator() {
-  const files = await fs.readdir(SPOOL);
+  if (validating) return;
+  validating = true;
 
-  for (const file of files) {
-    if (!file.endsWith('.json')) continue;
-    await validateFile(file);
+  try {
+    await ensureQuarantineDir();
+    const files = await fs.readdir(SPOOL);
+
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      await validateFile(file);
+    }
+  } catch (err) {
+    logger.error('validator', 'run', 'validator run failed', {
+      error: err.message
+    });
+  } finally {
+    validating = false;
   }
 }
 
-setInterval(
-  runValidator,
-  config.queue.validateIntervalSeconds * 1000
-);
+function startValidator() {
+  if (validateTimer) return validateTimer;
+
+  validateTimer = setInterval(
+    runValidator,
+    config.queue.validateIntervalSeconds * 1000
+  );
+
+  return validateTimer;
+}
+
+if (require.main === module) {
+  startValidator();
+}
+
+module.exports = { runValidator, startValidator };
