@@ -77,6 +77,10 @@ const server = new SMTPServer({
           tls: session.secure
         };
 
+        logger.info('smtp', 'receive', 'mail received', {
+          remote: session.remoteAddress
+        });
+
         await enqueue(payload);
 
         logger.info('smtp', 'receive', 'mail accepted', {
