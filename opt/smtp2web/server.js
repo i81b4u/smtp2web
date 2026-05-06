@@ -77,7 +77,7 @@ const server = new SMTPServer({
           tls: session.secure
         };
 
-        logger.info('smtp', 'receive', 'mail received', {
+        logger.info('smtp', 'receive', 'connection initiated', {
           remote: session.remoteAddress
         });
 
