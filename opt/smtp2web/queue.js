@@ -13,6 +13,8 @@ const MAX_ATTEMPTS = config.queue.maxAttempts || 10;
 let processing = false;
 let retryTimer;
 
+// Queue directories are created lazily so a fresh installation can start with
+// only the configured parent paths present.
 async function ensureQueueDirs() {
   await fs.mkdir(SPOOL, { recursive: true });
   await fs.mkdir(QUARANTINE, { recursive: true });
@@ -22,11 +24,14 @@ async function ensureQueueDirs() {
 async function writeQueueFileAtomic(file, payload) {
   const tmpFile = `${file}.${process.pid}.${Date.now()}.tmp`;
 
+  // Write to a temporary file and rename it into place so the processor never
+  // sees a partially written queue item.
   await fs.writeFile(tmpFile, JSON.stringify(payload, null, 2));
   await fs.rename(tmpFile, file);
 }
 
 function markDeliveryFailure(payload, err) {
+  // Retry state lives in the queued payload so it survives service restarts.
   payload.meta ??= {};
   payload.meta.delivery ??= {};
   payload.meta.delivery.attempts = (payload.meta.delivery.attempts || 0) + 1;
@@ -37,6 +42,8 @@ function markDeliveryFailure(payload, err) {
 }
 
 async function processQueueOnce() {
+  // Prevent overlapping timer and immediate-delivery runs from processing the
+  // same spool files concurrently.
   if (processing) return;
   processing = true;
   try {
@@ -51,6 +58,7 @@ async function processQueueOnce() {
 }
 
 async function enqueue(payload) {
+  // The queue filename is random and independent from untrusted mail headers.
   const id = crypto.randomUUID();
   payload.meta ??= {};
   payload.meta.messageId = id;
@@ -63,7 +71,8 @@ async function enqueue(payload) {
 
   logger.info('queue', 'enqueue', 'message queued', { messageId: id });
 
-  processQueueOnce(); // immediate attempt
+  // Try delivery immediately; the interval processor will handle later retries.
+  processQueueOnce();
 }
 
 async function processQueue() {
@@ -80,6 +89,8 @@ async function processQueue() {
     try {
       payload = JSON.parse(await fs.readFile(full, 'utf8'));
     } catch (err) {
+      // Corrupt or manually edited files are moved aside instead of blocking
+      // the rest of the queue.
       await fs.mkdir(QUARANTINE, { recursive: true });
       await fs.rename(full, path.join(QUARANTINE, file));
       logger.error('queue', 'quarantine', 'invalid JSON moved to quarantine', {
@@ -99,6 +110,7 @@ async function processQueue() {
       const attempts = markDeliveryFailure(payload, err);
 
       if (attempts >= MAX_ATTEMPTS) {
+        // Preserve permanently failed payloads for manual inspection/replay.
         await writeQueueFileAtomic(full, payload);
         await fs.rename(full, path.join(FAILED, file));
         logger.error('queue', 'failed', 'delivery failed permanently', {

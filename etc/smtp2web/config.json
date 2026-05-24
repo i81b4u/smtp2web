@@ -4,9 +4,14 @@
     "listen": "0.0.0.0",
     "port": 2525,
     "requireTLS": true,
+    "maxMessageBytes": 26214400,
     "tls": {
       "minVersion": "TLSv1.2",
       "maxVersion": "TLSv1.3",
+      "selfSignedDays": 397,
+      "subjectAltNames": [
+        "smtp2web.company.internal"
+      ],
       "ciphers": [
         "TLS_AES_256_GCM_SHA384",
         "TLS_AES_128_GCM_SHA256"

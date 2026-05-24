@@ -11,6 +11,7 @@ let validating = false;
 let validateTimer;
 
 async function ensureQuarantineDir() {
+  // Invalid queue files are preserved for inspection instead of deleted.
   await fs.mkdir(QUARANTINE, { recursive: true });
 }
 
@@ -18,6 +19,8 @@ async function validateFile(file) {
   const full = path.join(SPOOL, file);
 
   try {
+    // This validator is intended as a spool health check for files that may
+    // have been manually edited or copied in for replay.
     const data = JSON.parse(await fs.readFile(full, 'utf8'));
 
     if (!validateJSON(data)) {
@@ -34,6 +37,8 @@ async function validateFile(file) {
 }
 
 async function runValidator() {
+  // Avoid overlapping validation runs when the previous scan takes longer than
+  // the configured interval.
   if (validating) return;
   validating = true;
 
@@ -57,6 +62,7 @@ async function runValidator() {
 function startValidator() {
   if (validateTimer) return validateTimer;
 
+  // The validator can be run as a separate long-lived process if desired.
   validateTimer = setInterval(
     runValidator,
     config.queue.validateIntervalSeconds * 1000

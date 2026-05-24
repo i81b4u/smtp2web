@@ -44,6 +44,12 @@ The installation follows FHS / LSB conventions.
 ### Certificates
 /etc/smtp2web/certs
 
+The service generates a self-signed SMTP certificate at startup when
+the configured key or certificate file is missing or empty. Production
+installations should replace generated files with certificates from the
+organisation's CA. The private key must be readable only by the
+`smtp2web` service user.
+
 ### Runtime data
 /var/lib/smtp2web
 
@@ -63,14 +69,20 @@ Edit the configuration file:
 
 Pay special attention to:
 - SMTP listen address and port
+- Maximum SMTP message size (`smtp.maxMessageBytes`)
 - TLS certificate paths
+- TLS subject alternative names for generated self-signed certificates
 - Forwarder endpoint
 - Archive settings
 
 ### 4.3 Install Node.js dependencies
 From the code directory:
 cd /opt/smtp2web
-npm install --production
+npm ci --omit=dev --ignore-scripts
+
+Dependencies are pinned in `package.json` and locked in
+`package-lock.json`. Use `npm audit --omit=dev` during updates and
+review lockfile changes before deployment.
 
 ### 4.4 Firewall configuration (nftables example)
 Allow SMTP submission on port 2525 (as defined in config.json) from
@@ -144,7 +156,8 @@ commands, starting off as root:
 
 su - smtp2web -s /bin/bash  
 cd /opt/smtp2web  
-npm update  
+npm install --package-lock-only --ignore-scripts --save-exact <package>@<version>  
+npm audit --omit=dev  
 exit  
 
 ---
