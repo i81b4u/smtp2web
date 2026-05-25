@@ -3,7 +3,6 @@ const convert = require('xml-js');
 const config = require('./config');
 const logger = require('./logger');
 const { validateJSON } = require('./validator-core');
-const { archivePayload } = require('./archive');
 
 async function forward(payload) {
   // Validate before delivery so malformed spool files are retried/failed by the
@@ -43,21 +42,6 @@ async function forward(payload) {
     messageId: payload?.meta?.messageId,
     format: config.forwarder.format
   });
-
-  try {
-    // Archiving is intentionally best-effort after a successful forward; a
-    // failed archive should not cause duplicate delivery downstream.
-    await archivePayload(payload);
-
-    logger.info('archive', 'store', 'payload archived', {
-      messageId: payload?.meta?.messageId
-    });
-  } catch (err) {
-    logger.error('archive', 'store', 'payload forwarded but archive failed', {
-      messageId: payload?.meta?.messageId,
-      error: err.message
-    });
-  }
 }
 
 module.exports = { forward };
