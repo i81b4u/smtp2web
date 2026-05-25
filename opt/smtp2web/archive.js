@@ -3,7 +3,7 @@ const path = require('path');
 const config = require('./config');
 
 async function archivePayload(payload) {
-  // Archiving is optional and stores successfully forwarded messages by day so
+  // When enabled, archiving stores successfully forwarded messages by day so
   // retention/compression scripts can work on whole date directories.
   if (!config.archive?.enabled) return;
 

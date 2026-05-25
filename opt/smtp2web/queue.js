@@ -43,12 +43,15 @@ function markDeliveryFailure(payload, err) {
 }
 
 function markForwarded(payload) {
+  // Once downstream HTTP delivery succeeds, keep that fact in the queue file so
+  // archive retries do not send duplicate requests.
   payload.meta ??= {};
   payload.meta.delivery ??= {};
   payload.meta.delivery.forwardedAt ??= new Date().toISOString();
 }
 
 async function archiveForwardedPayload(payload) {
+  // The queue item is removed only after this archive step succeeds.
   await archivePayload(payload);
   payload.meta ??= {};
   payload.meta.delivery ??= {};
@@ -124,6 +127,8 @@ async function processQueue() {
         markForwarded(payload);
       }
 
+      // If archiving fails after forwarding, the persisted forwardedAt marker
+      // lets the next pass retry archiving without another HTTP POST.
       await archiveForwardedPayload(payload);
       await fs.unlink(full);
       logger.info('queue', 'cleanup', 'message removed from queue', {
