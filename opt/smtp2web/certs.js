@@ -110,8 +110,8 @@ function ensureTlsCertificates(config, logger = console) {
     if (typeof process.getuid === 'function' && process.getuid() === 0) {
       applyGeneratedFileOwnership(keyFile);
       applyGeneratedFileOwnership(certFile);
-      fs.chmodSync(keyFile, 0o600);
-      fs.chmodSync(certFile, 0o644);
+      fs.chmodSync(keyFile, 0o440);
+      fs.chmodSync(certFile, 0o640);
     }
     return false;
   }

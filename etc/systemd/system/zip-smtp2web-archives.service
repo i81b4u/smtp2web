@@ -1,7 +1,7 @@
 [Unit]
 Description=Zip smtp2web archives
 # Only start if the script exists
-ConditionPathIsExecutable=/usr/local/scripts/zip-smtp2web-archives.sh
+ConditionFileIsExecutable=/usr/local/scripts/zip-smtp2web-archives.sh
 
 [Service]
 Type=oneshot
@@ -17,8 +17,15 @@ PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
 ReadWritePaths=/var/lib/smtp2web
+UMask=0027
 
-# Logging
+# Create /run/smtp2web for this service
+RuntimeDirectory=smtp2web
+RuntimeDirectoryMode=0750
+
+# Allow writes where needed
+ReadWritePaths=/var/lib/smtp2web /var/log/smtp2web.log /run/smtp2web
+
 StandardOutput=journal
 StandardError=journal
 
