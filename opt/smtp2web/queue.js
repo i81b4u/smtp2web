@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const config = require('./config');
 const logger = require('./logger');
 const { forward } = require('./forwarder');
+const { archivePayload } = require('./archive');
 
 const SPOOL = config.queue.path;
 const QUARANTINE = path.join(SPOOL, 'quarantine');
@@ -39,6 +40,23 @@ function markDeliveryFailure(payload, err) {
   payload.meta.delivery.lastError = err.message;
 
   return payload.meta.delivery.attempts;
+}
+
+function markForwarded(payload) {
+  payload.meta ??= {};
+  payload.meta.delivery ??= {};
+  payload.meta.delivery.forwardedAt ??= new Date().toISOString();
+}
+
+async function archiveForwardedPayload(payload) {
+  await archivePayload(payload);
+  payload.meta ??= {};
+  payload.meta.delivery ??= {};
+  payload.meta.delivery.archivedAt = new Date().toISOString();
+
+  logger.info('archive', 'store', 'payload archived', {
+    messageId: payload?.meta?.messageId
+  });
 }
 
 async function processQueueOnce() {
@@ -101,7 +119,12 @@ async function processQueue() {
     }
 
     try {
-      await forward(payload);
+      if (!payload?.meta?.delivery?.forwardedAt) {
+        await forward(payload);
+        markForwarded(payload);
+      }
+
+      await archiveForwardedPayload(payload);
       await fs.unlink(full);
       logger.info('queue', 'cleanup', 'message removed from queue', {
         messageId: payload?.meta?.messageId

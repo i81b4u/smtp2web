@@ -131,7 +131,7 @@ Successfully delivered messages are archived by day under:
 
 Compression and retention are handled by a script that can be
 executed via cron or a systemd timer and is located here:
-/opt/smtp2web/archive-mails.sh
+/usr/local/scripts/zip-smtp2web-archives.sh
 
 ---
 
