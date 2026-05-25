@@ -117,7 +117,8 @@ swaks --to=user@company.internal --tls --server=smtp2web.company.internal
 ### Queue behavior
 - Messages appear in `/var/lib/smtp2web/spool`
 - Successfully delivered messages are archived when archiving is enabled
-- Failed deliveries remain queued
+- Failed deliveries are retried, then moved to the failed queue after
+  `queue.maxAttempts`
 
 ### Logs
 Inspect structured logs:
@@ -138,6 +139,12 @@ executed via cron or a systemd timer and is located here:
 ## 7. Recovery & replay
 Archived JSON files can be replayed manually by moving/copying them
 to the spool directory.
+
+Files moved from the failed queue back into the active spool are treated
+as manual replays. The retry counter and failure metadata are reset
+automatically. If a message had already been forwarded successfully but
+failed during archiving, its `forwardedAt` marker is preserved so replay
+retries archiving without sending a duplicate HTTP request.
 
 ---
 
