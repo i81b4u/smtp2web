@@ -7,20 +7,34 @@ Wants=network.target
 Type=simple
 User=smtp2web
 Group=smtp2web
+SupplementaryGroups=
 PrivateUsers=true
 UMask=0027
 WorkingDirectory=/opt/smtp2web
-ProtectSystem=full
+ExecStartPre=+/usr/bin/node /opt/smtp2web/certs.js
+ProtectSystem=strict
 ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+ReadWritePaths=/etc/smtp2web/certs /var/lib/smtp2web /var/log
 ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=5s
 Environment=NODE_ENV=production
 Environment=NODE_EXTRA_CA_CERTS=/etc/smtp2web/certs/rootca.pem
+Environment=SMTP2WEB_CERT_USER=smtp2web
+Environment=SMTP2WEB_CERT_GROUP=smtp2web
 
 [Install]
 WantedBy=multi-user.target
-
