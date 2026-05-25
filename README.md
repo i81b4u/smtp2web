@@ -161,11 +161,11 @@ retries archiving without sending a duplicate HTTP request.
 To update the nodejs modules used by smtp2web, execute the following
 commands, starting off as root:
 
-su - smtp2web -s /bin/bash  
-cd /opt/smtp2web  
-npm install --package-lock-only --ignore-scripts --save-exact <package>@<version>  
-npm audit --omit=dev  
-exit  
+su - smtp2web -s /bin/bash
+cd /opt/smtp2web
+npm install --package-lock-only --ignore-scripts --save-exact
+npm audit --omit=dev
+exit
 
 ---
 
