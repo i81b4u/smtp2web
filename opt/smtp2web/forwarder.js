@@ -28,7 +28,8 @@ async function forward(payload) {
     headers = { 'Content-Type': 'application/json; charset=UTF-8' };
   }
 
-  // A failed POST throws and leaves the item in the durable queue for retry.
+  // A failed POST throws and leaves the item in the durable queue for another
+  // delivery attempt.
   await axios.post(
     config.forwarder.endpoint,
     body,

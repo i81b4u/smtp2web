@@ -116,7 +116,7 @@ swaks --to=user@company.internal --tls --server=smtp2web.company.internal
 
 ### Queue behavior
 - Messages appear in `/var/lib/smtp2web/spool`
-- Successfully delivered messages are archived
+- Successfully delivered messages are archived when archiving is enabled
 - Failed deliveries remain queued
 
 ### Logs
@@ -145,8 +145,8 @@ to the spool directory.
 - JSON is the canonical internal format
 - XML is generated only at the forwarding edge (if enabled)
 - The queue is the single source of truth
-- Messages are only removed after they are successfully
-  sent and archived
+- Messages are only removed after they are successfully sent and, when
+  enabled, archived
 
 ---
 
