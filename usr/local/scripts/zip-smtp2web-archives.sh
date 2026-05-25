@@ -10,7 +10,7 @@ KEEPTIME=7
 ARCHIVEDIR="/var/lib/smtp2web/archive"
 ZIPBASENAME="mail-archive"
 LOGFILE="/var/log/smtp2web.log"
-LOCKFILE="/run/lock/smtp2web-archive.lock"
+LOCKFILE="/run/smtp2web/smtp2web-archive.lock"
 
 ###############################################################################
 # Safety checks
@@ -58,7 +58,7 @@ log "cleanup script started"
 # Cleanup old directories
 ###############################################################################
 
-find "$ARCHIVEDIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEPTIME" -exec rm -rf {} +;
+find "$ARCHIVEDIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEPTIME" -exec rm -rf {} +
 
 ###############################################################################
 # Find directories containing JSON files
