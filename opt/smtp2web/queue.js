@@ -42,6 +42,32 @@ function markDeliveryFailure(payload, err) {
   return payload.meta.delivery.attempts;
 }
 
+function markPermanentlyFailed(payload) {
+  // Mark files moved to the failed queue so moving them back to the active
+  // spool can be recognized as an intentional manual replay.
+  payload.meta ??= {};
+  payload.meta.delivery ??= {};
+  payload.meta.delivery.failedAt = new Date().toISOString();
+  payload.meta.delivery.failedReason = 'maxAttemptsExceeded';
+}
+
+function resetReplayFailureState(payload) {
+  const delivery = payload?.meta?.delivery;
+
+  if (!delivery?.failedAt) return false;
+
+  // A failed payload moved back into the active spool is treated as a manual
+  // replay. Clear retry bookkeeping while preserving forwardedAt so an
+  // archive-only replay does not duplicate downstream HTTP delivery.
+  delete delivery.attempts;
+  delete delivery.lastAttemptAt;
+  delete delivery.lastError;
+  delete delivery.failedAt;
+  delete delivery.failedReason;
+
+  return true;
+}
+
 function markForwarded(payload) {
   // Once downstream HTTP delivery succeeds, keep that fact in the queue file so
   // archive retries do not send duplicate requests.
@@ -121,6 +147,13 @@ async function processQueue() {
       continue;
     }
 
+    if (resetReplayFailureState(payload)) {
+      logger.info('queue', 'replay', 'failed message replay started', {
+        file,
+        messageId: payload?.meta?.messageId
+      });
+    }
+
     try {
       if (!payload?.meta?.delivery?.forwardedAt) {
         await forward(payload);
@@ -139,6 +172,7 @@ async function processQueue() {
 
       if (attempts >= MAX_ATTEMPTS) {
         // Preserve permanently failed payloads for manual inspection/replay.
+        markPermanentlyFailed(payload);
         await writeQueueFileAtomic(full, payload);
         await fs.rename(full, path.join(FAILED, file));
         logger.error('queue', 'failed', 'delivery failed permanently', {
