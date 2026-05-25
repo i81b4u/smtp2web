@@ -149,8 +149,8 @@ function ensureTlsCertificates(config, logger = console) {
     fs.copyFileSync(tmpCert, certFile);
     applyGeneratedFileOwnership(keyFile);
     applyGeneratedFileOwnership(certFile);
-    fs.chmodSync(keyFile, 0o600);
-    fs.chmodSync(certFile, 0o644);
+    fs.chmodSync(keyFile, 0o440);
+    fs.chmodSync(certFile, 0o640);
 
     const caFile = config.smtp?.tls?.ca || process.env.NODE_EXTRA_CA_CERTS;
     if (caFile && !hasUsableFile(caFile)) {
@@ -159,7 +159,7 @@ function ensureTlsCertificates(config, logger = console) {
       fs.mkdirSync(path.dirname(caFile), { recursive: true, mode: 0o750 });
       fs.copyFileSync(tmpCert, caFile);
       applyGeneratedFileOwnership(caFile);
-      fs.chmodSync(caFile, 0o644);
+      fs.chmodSync(caFile, 0o640);
     }
 
     logger.warn?.('tls', 'certificates', 'generated self-signed SMTP certificate', {
