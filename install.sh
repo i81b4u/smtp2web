@@ -6,7 +6,7 @@ APP_GROUP="smtp2web"
 APP_HOME="/var/lib/smtp2web"
 APP_SHELL="/usr/sbin/nologin"
 
-SRC_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SRC_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 
 require_root() {
   if [ "$(id -u)" -ne 0 ]; then

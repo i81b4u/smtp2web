@@ -1,169 +1,113 @@
-# smtp2web – Installation & Setup Guide
+# smtp2web
 
-`smtp2web` is a TLS-enabled SMTP ingestion service that converts
-incoming emails into structured JSON (or XML at the forwarding edge)
-and forwards them to an HTTP(S) endpoint. The service is designed
-to be robust, auditable, and easy to operate.
+`smtp2web` is a TLS-enabled SMTP ingestion service. It accepts email over
+SMTP, parses each message into structured JSON, queues it durably on disk, and
+forwards it to an HTTP or HTTPS endpoint. XML can be generated at the forwarding
+edge when a receiver requires it.
 
-This document describes how to install and run smtp2web.
+The repository is laid out as a root-relative Linux filesystem tree plus
+`install.sh`, which installs the files into their production locations.
 
----
+## Installed Layout
 
-## 1. Prerequisites
-### Operating system
-- Linux (systemd-based recommended)
-
-### Required software
-- Node.js (LTS recommended, v18+)
-- npm
-- OpenSSL (for TLS certificates)
-- firewalld/nftables (or equivalent firewall)
-
-### Privileges
-- Root access for installation
-- The service itself runs as a dedicated unprivileged user
-
----
-
-## 2. Filesystem layout
-The installation follows FHS / LSB conventions.
-
-### Code
-/opt/smtp2web
-
-### Configuration
+```text
 /etc/smtp2web/config.json
-
-### Certificates
-/etc/smtp2web/certs
-
-The service generates a self-signed SMTP certificate at startup when
-the configured key or certificate file is missing or empty. Production
-installations should replace generated files with certificates from the
-organisation's CA. The private key must be readable by the
-`smtp2web` service user.
-
-### Runtime data
-/var/lib/smtp2web
-
-### Logs
+/etc/smtp2web/certs/
+/opt/smtp2web/
+/usr/local/bin/zip-smtp2web-archives.sh
+/var/lib/smtp2web/spool/
+/var/lib/smtp2web/spool/failed/
+/var/lib/smtp2web/spool/quarantine/
+/var/lib/smtp2web/archive/
 /var/log/smtp2web.log
-
----
-
-## 3. Installation steps
-### 3.1 Clone the repository
 ```
+
+Systemd units are installed under `/etc/systemd/system`:
+
+```text
+smtp2web.service
+zip-smtp2web-archives.service
+zip-smtp2web-archives.timer
+```
+
+## Requirements
+
+- Linux with systemd
+- Root privileges for installation
+- Node.js 20.19.0 or newer
+- npm
+- OpenSSL
+- `zip` and `flock` for archive compression
+- A firewall that can restrict the SMTP listener to trusted sources
+
+## Quick Install
+
+```sh
 git clone https://github.com/i81b4u/smtp2web.git
 cd smtp2web
-```
-
-
-## 3.2 Install smtp2web
-```
 sudo ./install.sh
-```
-
-## 3.3 Get the needed node modules
-```
 sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
-```
-
-## 3.4 Modify the default configuration
-```
 sudo editor /etc/smtp2web/config.json
-```
-
-Pay special attention to:
-- SMTP listen address and port
-- Maximum SMTP message size (`smtp.maxMessageBytes`)
-- TLS certificate paths
-- TLS subject alternative names for generated self-signed certificates
-- Forwarder endpoint
-- Archive settings
-
-
-## 3.5 Firewall configuration (nftables example)
-Allow SMTP submission on port 2525 (as defined in config.json) from
-trusted hosts only. The following example is based on firewalld where
-an xml file, like smtp2web.xml is created in /etc/firewalld/zones.
-
-```
-<?xml version="1.0" encoding="utf-8"?>
-<zone target="DROP">
-  <port port="2525" protocol="tcp"/>
-  <forward-port port="25" protocol="tcp" to-port="2525"/>
-  <source address="192.168.1.0/24"/>
-</zone>
-```
-
-Adjust the source addresses as required.
-
-
-## 3.6 Start smtp2web
-```
 sudo systemctl daemon-reload
 sudo systemctl enable --now smtp2web.service
 sudo systemctl enable --now zip-smtp2web-archives.timer
 ```
 
----
+See [INSTALL.md](INSTALL.md) for detailed installation, update, firewall, and
+verification steps.
 
-## 4. Verification
-### SMTP test
-Use a tool like `swaks` to submit a test email.
-Example:
-```
-swaks --to=user@company.internal --tls --server=smtp2web.company.internal
-```
+## TLS Certificates
 
-### Queue behavior
-- Messages appear in `/var/lib/smtp2web/spool`
-- Successfully delivered messages are archived when archiving is enabled
-- Failed deliveries are retried, then moved to the failed queue after
-  `queue.maxAttempts`
+The default configuration uses:
 
-### Logs
-Inspect structured logs:
-```
-tail -f /var/log/smtp2web.log
+```text
+/etc/smtp2web/certs/private.pem
+/etc/smtp2web/certs/public.pem
+/etc/smtp2web/certs/rootca.pem
 ```
 
----
+If the configured key or certificate is missing or empty, `certs.js` generates a
+self-signed SMTP certificate at startup. Production deployments should replace
+the generated certificate with material from the organisation's CA. The private
+key is installed as `root:smtp2web` with mode `0440`, so it is readable by the
+service group and not world-readable.
 
-## 5. Archiving and retention
-Successfully delivered messages are archived by day under:
+## Queue And Delivery
+
+Incoming messages are written to `/var/lib/smtp2web/spool` before forwarding.
+The queue file is the source of truth until HTTP delivery succeeds and, when
+enabled, archiving succeeds.
+
+- Invalid JSON spool files are moved to `spool/quarantine`.
+- Repeated delivery failures are moved to `spool/failed` after
+  `queue.maxAttempts`.
+- Moving a failed JSON file back into the active spool is treated as a manual
+  replay. Retry metadata is reset, while a preserved `forwardedAt` marker
+  prevents duplicate HTTP delivery after an archive-only failure.
+
+## Archive Compression
+
+Delivered messages are archived by date under:
+
+```text
 /var/lib/smtp2web/archive/YYYY-MM-DD/
-
-Compression and retention are handled by a script that can be
-executed via cron or a systemd timer and is located here:
-```
-/usr/local/scripts/zip-smtp2web-archives.sh
 ```
 
----
+`/usr/local/bin/zip-smtp2web-archives.sh` compresses archived JSON files into
+date-local zip files and removes archive directories older than its retention
+window. The installed systemd timer runs this daily.
 
-## 6. Recovery & replay
-Archived JSON files can be replayed manually by moving/copying them
-to the spool directory.
+## Logs
 
-Files moved from the failed queue back into the active spool are treated
-as manual replays. The retry counter and failure metadata are reset
-automatically. If a message had already been forwarded successfully but
-failed during archiving, its `forwardedAt` marker is preserved so replay
-retries archiving without sending a duplicate HTTP request.
+Application logs are newline-delimited JSON in:
 
----
+```text
+/var/log/smtp2web.log
+```
 
-## 7. Notes
-- JSON is the canonical internal format
-- XML is generated only at the forwarding edge (if enabled)
-- The queue is the single source of truth
-- Messages are only removed after they are successfully sent and, when
-  enabled, archived
+Log rotation is configured by `/etc/logrotate.d/smtp2web`.
 
----
+## Development Note
 
-**This repository was developed with assistance from OpenAI Codex for coding, review, and troubleshooting.**
-
-End of document.
+This repository was developed with assistance from OpenAI Codex for coding,
+review, and troubleshooting.

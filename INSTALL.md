@@ -3,18 +3,20 @@
 This repository contains a root-relative filesystem tree and an installer that
 copies it into the expected system locations.
 
-Run the installer from the repository root.
+Run all commands from the repository root unless noted otherwise.
 
 ## Prerequisites
 
 - Linux system with systemd
 - Root privileges
-- Node.js 18 or newer
+- Node.js 20.19.0 or newer
 - npm
 - OpenSSL
+- `zip`
+- `flock`, usually provided by `util-linux`
 - git
 
-## Install from a clone
+## Install From A Clone
 
 Clone the repository and enter the repository root:
 
@@ -30,7 +32,7 @@ sudo ./install.sh
 ```
 
 The installer creates the `smtp2web` system user and group if needed, installs
-the files under `/etc`, `/opt`, `/usr/local/bin`, and `/var`, and applies the
+files under `/etc`, `/opt`, `/usr/local/bin`, and `/var`, and applies the
 intended ownership and permissions.
 
 The service user is created with:
@@ -53,15 +55,22 @@ At minimum, check:
 - `smtp.name`
 - `smtp.listen`
 - `smtp.port`
+- `smtp.requireTLS`
+- `smtp.maxMessageBytes`
 - `smtp.tls.subjectAltNames`
 - `forwarder.endpoint`
-- archive and queue paths
+- `forwarder.format`
+- `queue.path`
+- `queue.failedPath`
+- `archive.enabled`
+- `archive.path`
 
 The default TLS certificate paths are:
 
 ```text
 /etc/smtp2web/certs/private.pem
 /etc/smtp2web/certs/public.pem
+/etc/smtp2web/certs/rootca.pem
 ```
 
 Certificate files are not included in a fresh installation. On first startup,
@@ -69,7 +78,7 @@ Certificate files are not included in a fresh installation. On first startup,
 are not already present. Operator-provided certificates can also be placed at
 the configured paths before starting the service.
 
-## Install Node.js dependencies
+## Install Node.js Dependencies
 
 Install production dependencies in the deployed application directory:
 
@@ -83,7 +92,11 @@ If the installed npm version does not support `--omit=dev`, use:
 sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm install --production'
 ```
 
-## Reload systemd
+Dependencies are exact in `package.json` and locked in `package-lock.json`. Use
+`npm audit --omit=dev` during updates and review lockfile changes before
+deployment.
+
+## Reload And Start systemd Units
 
 The installer places systemd units under `/etc/systemd/system`, so reload
 systemd after installation:
@@ -92,7 +105,7 @@ systemd after installation:
 sudo systemctl daemon-reload
 ```
 
-This repository installs the main service and archive compression timer units:
+Installed units:
 
 ```text
 smtp2web.service
@@ -119,22 +132,6 @@ systemctl status zip-smtp2web-archives.timer
 systemctl list-timers zip-smtp2web-archives.timer
 ```
 
-## Running smtp2web
-
-The normal service command is:
-
-```sh
-sudo systemctl status smtp2web.service
-```
-
-For a manual foreground test run, stop the systemd service first and then run:
-
-```sh
-sudo systemctl stop smtp2web.service
-cd /opt/smtp2web
-sudo -u smtp2web node server.js
-```
-
 ## Firewall
 
 Allow the configured SMTP port from trusted sources only. The default
@@ -146,9 +143,29 @@ Example with UFW:
 sudo ufw allow from <trusted-network> to any port 2525 proto tcp
 ```
 
-Adjust this for the firewall used on the target system.
+Example firewalld zone XML:
 
-## Logs and runtime data
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<zone target="DROP">
+  <port port="2525" protocol="tcp"/>
+  <source address="192.168.1.0/24"/>
+</zone>
+```
+
+Adjust these examples for the firewall used on the target system.
+
+## Manual Foreground Run
+
+For a manual foreground test run, stop the systemd service first and then run:
+
+```sh
+sudo systemctl stop smtp2web.service
+cd /opt/smtp2web
+sudo -u smtp2web node server.js
+```
+
+## Logs And Runtime Data
 
 Log file:
 
@@ -171,12 +188,13 @@ Log rotation is installed at:
 /etc/logrotate.d/smtp2web
 ```
 
-## Basic verification
+## Basic Verification
 
 Check installed ownership and permissions:
 
 ```sh
 namei -l /etc/smtp2web/config.json
+namei -l /etc/smtp2web/certs
 namei -l /opt/smtp2web/server.js
 namei -l /var/lib/smtp2web/spool
 namei -l /var/log/smtp2web.log
@@ -202,7 +220,40 @@ host and port:
 swaks --server <smtp-host> --port 2525 --tls --to test@example.org
 ```
 
-## Updating an existing installation
+## Archive Compression
+
+Successfully delivered messages are archived by day under:
+
+```text
+/var/lib/smtp2web/archive/YYYY-MM-DD/
+```
+
+The installed archive script is:
+
+```text
+/usr/local/bin/zip-smtp2web-archives.sh
+```
+
+The systemd timer runs it daily. The script writes structured log lines to
+`/var/log/smtp2web.log`, compresses archived JSON files into zip files, and
+removes archive directories older than its configured retention window.
+
+## Recovery And Replay
+
+Archived JSON files can be replayed manually by copying them to the active spool
+directory:
+
+```text
+/var/lib/smtp2web/spool/
+```
+
+Files moved from the failed queue back into the active spool are treated as
+manual replays. The retry counter and failure metadata are reset automatically.
+If a message had already been forwarded successfully but failed during
+archiving, its `forwardedAt` marker is preserved so replay retries archiving
+without sending a duplicate HTTP request.
+
+## Updating An Existing Installation
 
 Pull the latest repository changes and rerun the installer:
 
@@ -219,8 +270,7 @@ changed:
 sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
 ```
 
-Restart the main smtp2web process according to how it is supervised on the
-target system:
+Restart the service:
 
 ```sh
 sudo systemctl restart smtp2web.service

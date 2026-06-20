@@ -65,9 +65,7 @@ find "$ARCHIVEDIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEPTIME" -exec rm 
 ###############################################################################
 
 readarray -t DIRSTOARCHIVE < <(
-  find "$ARCHIVEDIR" -type f -name "*.json" \
-  | xargs -r dirname \
-  | sort -u
+  find "$ARCHIVEDIR" -type f -name "*.json" -exec dirname {} \; | sort -u
 )
 
 if [ "${#DIRSTOARCHIVE[@]}" -eq 0 ]; then
