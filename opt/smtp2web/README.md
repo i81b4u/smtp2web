@@ -25,7 +25,14 @@ This document describes how to install and run smtp2web.
 
 ---
 
-## 2. Filesystem layout
+## 2. Service user
+The service must run as a dedicated system user.
+The following line is an example of an entry in /etc/passwd:
+smtp2web:x:999:988::/var/lib/smtp2web:/usr/sbin/nologin
+
+---
+
+## 3. Filesystem layout
 The installation follows FHS / LSB conventions.
 
 ### Code
@@ -40,7 +47,7 @@ The installation follows FHS / LSB conventions.
 The service generates a self-signed SMTP certificate at startup when
 the configured key or certificate file is missing or empty. Production
 installations should replace generated files with certificates from the
-organisation's CA. The private key must be readable by the
+organisation's CA. The private key must be readable only by the
 `smtp2web` service user.
 
 ### Runtime data
@@ -51,22 +58,14 @@ organisation's CA. The private key must be readable by the
 
 ---
 
-## 3. Installation steps
-### 3.1 Clone the repository
-git clone <repo>
-cd smtp2web
+## 4. Installation steps
+### 4.1 Download zip file
+Download the zip file from github and extract all files.
+Make sure all files have the correct owners and permissions.
 
-
-## 3.2 Install smtp2web
-sudo ./install.sh
-
-
-## 3.3 Get the needed node modules
-sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
-
-
-## 3.4 Modify the default configuration
-sudo editor /etc/smtp2web/config.json
+### 4.2 Review configuration
+Edit the configuration file:
+/etc/smtp2web/config.json
 
 Pay special attention to:
 - SMTP listen address and port
@@ -76,8 +75,16 @@ Pay special attention to:
 - Forwarder endpoint
 - Archive settings
 
+### 4.3 Install Node.js dependencies
+From the code directory:
+cd /opt/smtp2web
+npm ci --omit=dev --ignore-scripts
 
-### 3.5 Firewall configuration (nftables example)
+Dependencies are pinned in `package.json` and locked in
+`package-lock.json`. Use `npm audit --omit=dev` during updates and
+review lockfile changes before deployment.
+
+### 4.4 Firewall configuration (nftables example)
 Allow SMTP submission on port 2525 (as defined in config.json) from
 trusted hosts only. The following example is based on firewalld where
 an xml file, like smtp2web.xml is created in /etc/firewalld/zones.
@@ -91,16 +98,17 @@ an xml file, like smtp2web.xml is created in /etc/firewalld/zones.
 
 Adjust the source addresses as required.
 
+### 4.5 Start the service (manual)
+For testing purposes:
+cd /opt/smtp2web
+sudo -u smtp2web node server.js
 
-## 3.6 Start smtp2web
-sudo systemctl daemon-reload
-sudo systemctl enable --now smtp2web.service
-sudo systemctl enable --now zip-smtp2web-archives.timer
-
+Logs will be written to:
+/var/log/smtp2web.log
 
 ---
 
-## 4. Verification
+## 5. Verification
 ### SMTP test
 Use a tool like `swaks` to submit a test email.
 Example:
@@ -118,7 +126,7 @@ tail -f /var/log/smtp2web.log
 
 ---
 
-## 5. Archiving and retention
+## 6. Archiving and retention
 Successfully delivered messages are archived by day under:
 /var/lib/smtp2web/archive/YYYY-MM-DD/
 
@@ -128,7 +136,7 @@ executed via cron or a systemd timer and is located here:
 
 ---
 
-## 6. Recovery & replay
+## 7. Recovery & replay
 Archived JSON files can be replayed manually by moving/copying them
 to the spool directory.
 
@@ -140,7 +148,7 @@ retries archiving without sending a duplicate HTTP request.
 
 ---
 
-## 7. Notes
+## 8. Notes
 - JSON is the canonical internal format
 - XML is generated only at the forwarding edge (if enabled)
 - The queue is the single source of truth
@@ -149,6 +157,16 @@ retries archiving without sending a duplicate HTTP request.
 
 ---
 
-**This repository was developed with assistance from OpenAI Codex for coding, review, and troubleshooting.**
+## 9. Update nodejs modules
+To update the nodejs modules used by smtp2web, execute the following
+commands, starting off as root:
+
+su - smtp2web -s /bin/bash  
+cd /opt/smtp2web  
+npm install --package-lock-only --ignore-scripts --save-exact  
+npm audit --omit=dev  
+exit  
+
+---
 
 End of document.

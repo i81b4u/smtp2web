@@ -33,7 +33,7 @@ Restart=on-failure
 RestartSec=5s
 Environment=NODE_ENV=production
 Environment=NODE_EXTRA_CA_CERTS=/etc/smtp2web/certs/rootca.pem
-Environment=SMTP2WEB_CERT_USER=smtp2web
+Environment=SMTP2WEB_CERT_USER=root
 Environment=SMTP2WEB_CERT_GROUP=smtp2web
 
 [Install]
