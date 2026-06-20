@@ -1,219 +1,173 @@
-# smtp2web – Installation & Setup Guide
+# Installing smtp2web
 
-`smtp2web` is a TLS-enabled SMTP ingestion service that converts
-incoming emails into structured JSON (or XML at the forwarding edge)
-and forwards them to an HTTP(S) endpoint. The service is designed
-to be robust, auditable, and easy to operate.
+This file is installed with the application for operator reference. When
+installing from the repository, run `./install.sh` from the repository root.
 
-This document describes how to install and run smtp2web from
-a tar archive.
+## Prerequisites
 
----
-
-## 1. Prerequisites
-### Operating system
-- Linux (systemd-based recommended)
-
-### Required software
-- Node.js (LTS recommended, v18+)
+- Linux system with systemd
+- Root privileges
+- Node.js 20.19.0 or newer
 - npm
-- OpenSSL (for TLS certificates)
-- firewalld/nftables (or equivalent firewall)
+- OpenSSL
+- `zip`
+- `flock`, usually provided by `util-linux`
 
-### Privileges
-- Root access for installation
-- The service itself runs as a dedicated unprivileged user
+## Standard Installation
 
----
+From the repository root:
 
-## 2. Service user
-The service must run as a dedicated system user.
-The following line is an example of an entry in /etc/passwd:
-smtp2web:x:999:988::/var/lib/smtp2web:/usr/sbin/nologin
+```sh
+sudo ./install.sh
+```
 
----
+The installer creates the `smtp2web` system user and group if needed, installs
+files under `/etc`, `/opt`, `/usr/local/bin`, and `/var`, and applies the
+intended ownership and permissions.
 
-## 3. Filesystem layout
-The installation follows FHS / LSB conventions.
+Install production dependencies in the deployed application directory:
 
-### Code
-/opt/smtp2web
+```sh
+sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
+```
 
-### Configuration and certificates
-/etc/smtp2web/
-├── config.json
-└── certs/
-   ├── public.pem
-   └── private.pem
+Review and edit configuration:
 
-### Runtime data
-/var/lib/smtp2web/
-├── spool/
-│ └── quarantine/
-└── archive/
+```sh
+sudo editor /etc/smtp2web/config.json
+```
 
-### Logs
-/var/log/smtp2web.log
+At minimum, check:
 
----
+- `smtp.name`
+- `smtp.listen`
+- `smtp.port`
+- `smtp.requireTLS`
+- `smtp.maxMessageBytes`
+- `smtp.tls.subjectAltNames`
+- `forwarder.endpoint`
+- `forwarder.format`
+- `queue.path`
+- `queue.failedPath`
+- `archive.enabled`
+- `archive.path`
 
-## 4. Installation steps
-### 4.1 Extract the archive
-tar -xjf smtp2web.tar.bz2 -C /
+## Start Services
 
-To view the contents of the archive before actually extracting,
-execute the following command:
-tar -tjf smtp2web.tar.bz2 | less
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now smtp2web.service
+sudo systemctl enable --now zip-smtp2web-archives.timer
+```
 
-### 4.2 Review configuration
-Edit the configuration file:
-/etc/smtp2web/config.json
+Installed units:
 
-Pay special attention to:
-- SMTP listen address and port
-- TLS certificate paths
-- Forwarder endpoint
-- Archive settings
+```text
+smtp2web.service
+zip-smtp2web-archives.service
+zip-smtp2web-archives.timer
+```
 
-### 4.3 Install Node.js dependencies
-From the code directory:
-cd /opt/smtp2web
-npm install --production
+Check service and timer status:
 
-### 4.4 Firewall configuration (nftables example)
-Allow SMTP submission on port 2525 (as defined in config.json) from
-trusted hosts only. The following example is based on firewalld where
-an xml file, like smtp2web.xml is created in /etc/firewalld/zones.
+```sh
+sudo systemctl status smtp2web.service
+systemctl list-timers zip-smtp2web-archives.timer
+```
 
-<?xml version="1.0" encoding="utf-8"?>
-<zone target="DROP">
-  <port port="2525" protocol="tcp"/>
-  <forward-port port="25" protocol="tcp" to-port="2525"/>
-  <source address="192.168.1.0/24"/>
-</zone>
+## TLS Certificates
 
-Adjust the source addresses as required.
+The default TLS certificate paths are:
 
-### 4.5 Start the service (manual)
-For testing purposes:
-cd /opt/smtp2web
-sudo -u smtp2web node server.js
+```text
+/etc/smtp2web/certs/private.pem
+/etc/smtp2web/certs/public.pem
+/etc/smtp2web/certs/rootca.pem
+```
 
-Logs will be written to:
-/var/log/smtp2web.log
+Certificate files are not included in a fresh installation. On first startup,
+`/opt/smtp2web/certs.js` creates self-signed certificate files if usable files
+are not already present. Operator-provided certificates can also be placed at
+the configured paths before starting the service.
 
----
+## Firewall
 
-## 5. Verification
-### SMTP test
-Use a tool like `swaks` to submit a test email.
-Example:
-swaks --to=user@test --tls --server=smtp2web.example.org
+Allow the configured SMTP port from trusted sources only. The default
+configuration listens on TCP port `2525`.
 
-### Queue behavior
-- Messages appear in `/var/lib/smtp2web/spool`
-- Successfully delivered messages are archived
-- Failed deliveries remain queued
+Example with UFW:
 
-### Logs
-Inspect structured logs:
-tail -f /var/log/smtp2web.log
+```sh
+sudo ufw allow from <trusted-network> to any port 2525 proto tcp
+```
 
----
+## Verification
 
-## 6. Archiving and retention
+Check installed ownership and permissions:
+
+```sh
+namei -l /etc/smtp2web/config.json
+namei -l /etc/smtp2web/certs
+namei -l /opt/smtp2web/server.js
+namei -l /var/lib/smtp2web/spool
+namei -l /var/log/smtp2web.log
+```
+
+Inspect logs:
+
+```sh
+sudo tail -f /var/log/smtp2web.log
+journalctl -u smtp2web.service -f
+```
+
+Submit a test message with a tool such as `swaks`, adjusted for your configured
+host and port:
+
+```sh
+swaks --server <smtp-host> --port 2525 --tls --to test@example.org
+```
+
+## Archive Compression
+
 Successfully delivered messages are archived by day under:
+
+```text
 /var/lib/smtp2web/archive/YYYY-MM-DD/
+```
 
-Compression and retention are handled by a script that can be
-executed via cron, a systemd timer or JS7 and is located here:
-/opt/smtp2web/archive-mails.sh
+The installed archive script is:
 
----
+```text
+/usr/local/bin/zip-smtp2web-archives.sh
+```
 
-## 7. Recovery & replay
-Archived JSON files can be replayed manually by moving/copying them
-to the spool directory.
+The systemd timer runs it daily. The script writes structured log lines to
+`/var/log/smtp2web.log`, compresses archived JSON files into zip files, and
+removes archive directories older than its configured retention window.
 
----
+## Recovery And Replay
 
-## 8. Notes
-- JSON is the canonical internal format
-- XML is generated only at the forwarding edge (if enabled)
-- The queue is the single source of truth
-- Messages are only removed after they are successfully
-  sent and archived
+Archived JSON files can be replayed manually by copying them to the active spool
+directory:
 
----
+```text
+/var/lib/smtp2web/spool/
+```
 
-## 9. Example install script
+Files moved from the failed queue back into the active spool are treated as
+manual replays. The retry counter and failure metadata are reset automatically.
+If a message had already been forwarded successfully but failed during
+archiving, its `forwardedAt` marker is preserved so replay retries archiving
+without sending a duplicate HTTP request.
 
-#!/bin/sh
-set -eu
+## Updating
 
-APP_NAME="smtp2web"
-APP_USER="smtp2web"
-APP_GROUP="smtp2web"
+From the repository root:
 
-CODE_DIR="/opt/smtp2web"
-CONFIG_DIR="/etc/smtp2web"
-DATA_DIR="/var/lib/smtp2web"
-LOG_FILE="/var/log/smtp2web.log"
-
-echo "[*] Bootstrapping ${APP_NAME}"
-
-# Create system user if needed
-if ! id "${APP_USER}" >/dev/null 2>&1; then
-  echo "[*] Creating system user ${APP_USER}"
-  useradd \
-    --system \
-    --home "${DATA_DIR}" \
-    --shell /usr/sbin/nologin \
-    "${APP_USER}"
-fi
-
-# Create directories
-echo "[*] Creating directory structure"
-
-mkdir -p "${CODE_DIR}"
-mkdir -p "${CONFIG_DIR}/certs"
-mkdir -p "${DATA_DIR}/spool/quarantine"
-mkdir -p "${DATA_DIR}/archive"
-
-touch "${DATA_DIR}/.keep"
-
-# Permissions
-echo "[*] Setting permissions"
-
-chown -R "${APP_USER}:${APP_GROUP}" "${CODE_DIR}"
-chmod -R 750 "${CODE_DIR}"
-
-chown -R "${APP_USER}:${APP_GROUP}" "${DATA_DIR}"
-chmod -R 750 "${DATA_DIR}"
-
-touch "${LOG_FILE}"
-chown "${APP_USER}:adm" "${LOG_FILE}"
-chmod 640 "${LOG_FILE}"
-
-echo "[*] Bootstrap completed successfully"
-echo "[*] Next steps:"
-echo "    - Review ${CONFIG_DIR}/config.json"
-echo "    - Make sure that PKI certificates are present and configured"
-echo "    - Install Node.js dependencies in ${CODE_DIR}"
-echo "    - Configure firewall (port 2525)"
-echo "    - Start service as user ${APP_USER}"
-
----
-
-## 10. Update nodejs modules
-To update the nodejs modules used by smtp2web, execute the following
-commands, starting off as root:
-
-su - smtp2web -s /bin/bash
-cd /opt/smtp2web/
-npm update
-exit
-
----
-
-End of document.
+```sh
+git pull
+sudo ./install.sh
+sudo systemctl daemon-reload
+sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
+sudo systemctl restart smtp2web.service
+```
