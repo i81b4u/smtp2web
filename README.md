@@ -53,20 +53,26 @@ organisation's CA. The private key must be readable by the
 
 ## 3. Installation steps
 ### 3.1 Clone the repository
-git clone <repo>
+```
+git clone https://github.com/i81b4u/smtp2web.git
 cd smtp2web
+```
 
 
 ## 3.2 Install smtp2web
+```
 sudo ./install.sh
-
+```
 
 ## 3.3 Get the needed node modules
+```
 sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
-
+```
 
 ## 3.4 Modify the default configuration
+```
 sudo editor /etc/smtp2web/config.json
+```
 
 Pay special attention to:
 - SMTP listen address and port
@@ -77,26 +83,29 @@ Pay special attention to:
 - Archive settings
 
 
-### 3.5 Firewall configuration (nftables example)
+## 3.5 Firewall configuration (nftables example)
 Allow SMTP submission on port 2525 (as defined in config.json) from
 trusted hosts only. The following example is based on firewalld where
 an xml file, like smtp2web.xml is created in /etc/firewalld/zones.
 
+```
 <?xml version="1.0" encoding="utf-8"?>
 <zone target="DROP">
   <port port="2525" protocol="tcp"/>
   <forward-port port="25" protocol="tcp" to-port="2525"/>
   <source address="192.168.1.0/24"/>
 </zone>
+```
 
 Adjust the source addresses as required.
 
 
 ## 3.6 Start smtp2web
+```
 sudo systemctl daemon-reload
 sudo systemctl enable --now smtp2web.service
 sudo systemctl enable --now zip-smtp2web-archives.timer
-
+```
 
 ---
 
@@ -104,7 +113,9 @@ sudo systemctl enable --now zip-smtp2web-archives.timer
 ### SMTP test
 Use a tool like `swaks` to submit a test email.
 Example:
+```
 swaks --to=user@company.internal --tls --server=smtp2web.company.internal
+```
 
 ### Queue behavior
 - Messages appear in `/var/lib/smtp2web/spool`
@@ -114,7 +125,9 @@ swaks --to=user@company.internal --tls --server=smtp2web.company.internal
 
 ### Logs
 Inspect structured logs:
+```
 tail -f /var/log/smtp2web.log
+```
 
 ---
 
@@ -124,7 +137,9 @@ Successfully delivered messages are archived by day under:
 
 Compression and retention are handled by a script that can be
 executed via cron or a systemd timer and is located here:
+```
 /usr/local/scripts/zip-smtp2web-archives.sh
+```
 
 ---
 
