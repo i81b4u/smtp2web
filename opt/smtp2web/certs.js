@@ -84,12 +84,12 @@ function resolveGroupId(name, fallbackUser) {
 }
 
 function applyGeneratedFileOwnership(file) {
-  // ExecStartPre runs as root in systemd, then hands the generated files to the
-  // unprivileged service account that will read them during normal startup.
+  // ExecStartPre runs as root in systemd. Keep root as the file owner and make
+  // the service group the reader through group permissions.
   if (typeof process.getuid !== 'function' || process.getuid() !== 0) return;
 
-  const user = process.env.SMTP2WEB_CERT_USER || 'smtp2web';
-  const group = process.env.SMTP2WEB_CERT_GROUP || user;
+  const user = process.env.SMTP2WEB_CERT_USER || 'root';
+  const group = process.env.SMTP2WEB_CERT_GROUP || 'smtp2web';
   const uid = resolveUserId(user);
   const gid = resolveGroupId(group, user);
 

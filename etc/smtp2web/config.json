@@ -1,6 +1,6 @@
 {
   "smtp": {
-    "name": "smtp2web.company.internal",
+    "name": "smtp2web.example.org",
     "listen": "0.0.0.0",
     "port": 2525,
     "requireTLS": true,
@@ -10,7 +10,7 @@
       "maxVersion": "TLSv1.3",
       "selfSignedDays": 397,
       "subjectAltNames": [
-        "smtp2web.company.internal"
+        "smtp2web.example.org"
       ],
       "ciphers": [
         "TLS_AES_256_GCM_SHA384",
@@ -30,8 +30,8 @@
   },
 
   "forwarder": {
-    "endpoint": "https://apigateway.company.internal/smtppolicy",
-    "format": "xml",
+    "endpoint": "https://apigw.example.org/smtp2graph",
+    "format": "json",
     "timeoutSeconds": 5
   },
 
