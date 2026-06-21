@@ -1,4 +1,4 @@
-/var/log/smtp2web.log {
+/var/log/smtp2web/smtp2web.log {
         su root smtp2web
         rotate 4
         weekly

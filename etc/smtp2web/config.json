@@ -41,6 +41,6 @@
   },
 
   "log": {
-    "path": "/var/log/smtp2web.log"
+    "path": "/var/log/smtp2web/smtp2web.log"
   }
 }

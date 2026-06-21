@@ -19,7 +19,7 @@ The repository is laid out as a root-relative Linux filesystem tree plus
 /var/lib/smtp2web/spool/failed/
 /var/lib/smtp2web/spool/quarantine/
 /var/lib/smtp2web/archive/
-/var/log/smtp2web.log
+/var/log/smtp2web/smtp2web.log
 ```
 
 Systemd units are installed under `/etc/systemd/system`:
@@ -102,7 +102,7 @@ window. The installed systemd timer runs this daily.
 Application logs are newline-delimited JSON in:
 
 ```text
-/var/log/smtp2web.log
+/var/log/smtp2web/smtp2web.log
 ```
 
 Log rotation is configured by `/etc/logrotate.d/smtp2web`.

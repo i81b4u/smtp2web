@@ -19,7 +19,7 @@ UMask=0027
 RuntimeDirectory=smtp2web
 RuntimeDirectoryMode=0750
 
-ReadWritePaths=/var/lib/smtp2web /var/log/smtp2web.log /run/smtp2web
+ReadWritePaths=/var/lib/smtp2web /var/log/smtp2web /run/smtp2web
 
 StandardOutput=journal
 StandardError=journal

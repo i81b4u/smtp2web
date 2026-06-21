@@ -9,7 +9,7 @@ EXPECTED_USER="smtp2web"
 KEEPTIME=7
 ARCHIVEDIR="/var/lib/smtp2web/archive"
 ZIPBASENAME="mail-archive"
-LOGFILE="/var/log/smtp2web.log"
+LOGFILE="/var/log/smtp2web/smtp2web.log"
 LOCKFILE="/run/smtp2web/smtp2web-archive.lock"
 
 ###############################################################################
