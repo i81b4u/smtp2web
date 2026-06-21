@@ -97,11 +97,16 @@ ensure_user
 ensure_dir /etc/smtp2web root "${APP_GROUP}" 750
 ensure_dir /etc/smtp2web/certs root "${APP_GROUP}" 750
 ensure_dir /opt/smtp2web "${APP_USER}" "${APP_GROUP}" 750
+ensure_dir /var/log/smtp2web "${APP_USER}" adm 750
+ensure_empty_file /var/log/smtp2web/smtp2web.log "${APP_USER}" adm 640
 ensure_dir /var/lib/smtp2web "${APP_USER}" "${APP_GROUP}" 750
 ensure_dir /var/lib/smtp2web/archive "${APP_USER}" "${APP_GROUP}" 750
+ensure_empty_file /var/lib/smtp2web/archive/.keep "${APP_USER}" "${APP_GROUP}" 640
 ensure_dir /var/lib/smtp2web/spool "${APP_USER}" "${APP_GROUP}" 750
 ensure_dir /var/lib/smtp2web/spool/failed "${APP_USER}" "${APP_GROUP}" 750
+ensure_empty_file /var/lib/smtp2web/spool/failed/.keep "${APP_USER}" "${APP_GROUP}" 640
 ensure_dir /var/lib/smtp2web/spool/quarantine "${APP_USER}" "${APP_GROUP}" 750
+ensure_empty_file /var/lib/smtp2web/spool/quarantine/.keep "${APP_USER}" "${APP_GROUP}" 640
 
 install_file etc/smtp2web/config.json /etc/smtp2web/config.json root "${APP_GROUP}" 640
 install_optional_file etc/smtp2web/certs/private.pem /etc/smtp2web/certs/private.pem root "${APP_GROUP}" 440
@@ -122,11 +127,6 @@ install_file opt/smtp2web/README.md /opt/smtp2web/README.md "${APP_USER}" "${APP
 install_file opt/smtp2web/server.js /opt/smtp2web/server.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/validator-core.js /opt/smtp2web/validator-core.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/validator.js /opt/smtp2web/validator.js "${APP_USER}" "${APP_GROUP}" 640
-
-ensure_empty_file /var/log/smtp2web.log "${APP_USER}" adm 640
-install_file var/lib/smtp2web/archive/.keep /var/lib/smtp2web/archive/.keep "${APP_USER}" "${APP_GROUP}" 640
-install_file var/lib/smtp2web/spool/failed/.keep /var/lib/smtp2web/spool/failed/.keep "${APP_USER}" "${APP_GROUP}" 640
-install_file var/lib/smtp2web/spool/quarantine/.keep /var/lib/smtp2web/spool/quarantine/.keep "${APP_USER}" "${APP_GROUP}" 640
 
 install_file etc/systemd/system/smtp2web.service /etc/systemd/system/smtp2web.service root root 644
 install_file etc/systemd/system/zip-smtp2web-archives.service /etc/systemd/system/zip-smtp2web-archives.service root root 644

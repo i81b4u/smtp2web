@@ -15,7 +15,7 @@ runtime data, and logs live outside this directory:
 /var/lib/smtp2web/spool/failed/
 /var/lib/smtp2web/spool/quarantine/
 /var/lib/smtp2web/archive/
-/var/log/smtp2web.log
+/var/log/smtp2web/smtp2web.log
 ```
 
 Systemd units:
@@ -60,7 +60,7 @@ systemctl list-timers zip-smtp2web-archives.timer
 Tail logs:
 
 ```sh
-sudo tail -f /var/log/smtp2web.log
+sudo tail -f /var/log/smtp2web/smtp2web.log
 journalctl -u smtp2web.service -f
 ```
 

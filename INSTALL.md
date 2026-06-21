@@ -170,7 +170,7 @@ sudo -u smtp2web node server.js
 Log file:
 
 ```text
-/var/log/smtp2web.log
+/var/log/smtp2web/smtp2web.log
 ```
 
 Runtime data:
@@ -197,7 +197,7 @@ namei -l /etc/smtp2web/config.json
 namei -l /etc/smtp2web/certs
 namei -l /opt/smtp2web/server.js
 namei -l /var/lib/smtp2web/spool
-namei -l /var/log/smtp2web.log
+namei -l /var/log/smtp2web
 ```
 
 Check that the application starts:
@@ -209,7 +209,7 @@ sudo systemctl status smtp2web.service
 Inspect logs:
 
 ```sh
-sudo tail -f /var/log/smtp2web.log
+sudo tail -f /var/log/smtp2web/smtp2web.log
 journalctl -u smtp2web.service -f
 ```
 
@@ -235,7 +235,7 @@ The installed archive script is:
 ```
 
 The systemd timer runs it daily. The script writes structured log lines to
-`/var/log/smtp2web.log`, compresses archived JSON files into zip files, and
+`/var/log/smtp2web/smtp2web.log`, compresses archived JSON files into zip files, and
 removes archive directories older than its configured retention window.
 
 ## Recovery And Replay
