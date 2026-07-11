@@ -5,6 +5,7 @@ const config = require('./config');
 const logger = require('./logger');
 const { forward } = require('./forwarder');
 const { archivePayload } = require('./archive');
+const { validatePayload } = require('./validator-core');
 
 const SPOOL = config.queue.path;
 const QUARANTINE = path.join(SPOOL, 'quarantine');
@@ -29,6 +30,15 @@ async function writeQueueFileAtomic(file, payload) {
   // sees a partially written queue item.
   await fs.writeFile(tmpFile, JSON.stringify(payload, null, 2));
   await fs.rename(tmpFile, file);
+}
+
+async function quarantineFile(full, file, error) {
+  await fs.mkdir(QUARANTINE, { recursive: true });
+  await fs.rename(full, path.join(QUARANTINE, file));
+  logger.error('queue', 'quarantine', 'invalid payload moved to quarantine', {
+    file,
+    error
+  });
 }
 
 function markDeliveryFailure(payload, err) {
@@ -138,12 +148,15 @@ async function processQueue() {
     } catch (err) {
       // Corrupt or manually edited files are moved aside instead of blocking
       // the rest of the queue.
-      await fs.mkdir(QUARANTINE, { recursive: true });
-      await fs.rename(full, path.join(QUARANTINE, file));
-      logger.error('queue', 'quarantine', 'invalid JSON moved to quarantine', {
-        file,
-        error: err.message
-      });
+      await quarantineFile(full, file, err.message);
+      continue;
+    }
+
+    const validation = validatePayload(payload);
+    if (!validation.valid) {
+      // Structural errors cannot be repaired by retrying a downstream HTTP
+      // request, so retain the file for inspection immediately.
+      await quarantineFile(full, file, validation.errors.join('; '));
       continue;
     }
 

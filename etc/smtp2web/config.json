@@ -32,7 +32,11 @@
   "forwarder": {
     "endpoint": "https://apigw.example.org/smtp2graph",
     "format": "json",
-    "timeoutSeconds": 5
+    "timeoutSeconds": 5,
+    "idempotency": {
+      "enabled": false,
+      "header": "Idempotency-Key"
+    }
   },
 
   "archive": {

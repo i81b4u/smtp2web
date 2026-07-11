@@ -2,7 +2,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const config = require('./config');
 const logger = require('./logger');
-const { validateJSON } = require('./validator-core');
+const { validatePayload } = require('./validator-core');
 
 const SPOOL = config.queue.path;
 const QUARANTINE = path.join(SPOOL, 'quarantine');
@@ -23,8 +23,9 @@ async function validateFile(file) {
     // have been manually edited or copied in for replay.
     const data = JSON.parse(await fs.readFile(full, 'utf8'));
 
-    if (!validateJSON(data)) {
-      throw new Error('JSON validation failed');
+    const validation = validatePayload(data);
+    if (!validation.valid) {
+      throw new Error(validation.errors.join('; '));
     }
   } catch (err) {
     await ensureQuarantineDir();
