@@ -47,6 +47,7 @@ At minimum, check:
 - `smtp.tls.subjectAltNames`
 - `forwarder.endpoint`
 - `forwarder.format`
+- `forwarder.idempotency.enabled`
 - `queue.path`
 - `queue.failedPath`
 - `archive.enabled`
@@ -127,6 +128,27 @@ host and port:
 swaks --server <smtp-host> --port 2525 --tls --to test@example.org
 ```
 
+## Automated Tests
+
+The structural unit tests and the integration suite are installed under
+`/opt/smtp2web/test`. Run them as the service user after installing production
+dependencies:
+
+```sh
+sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm test'
+sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm run test:integration'
+```
+
+The integration suite requires Python 3, `swaks`, `curl`, and OpenSSL. It starts
+temporary loopback-only smtp2web and fake-gateway processes; it does not start,
+stop, or use the configured systemd service, and it does not alter production
+configuration, mail queues, archives, or logs.
+
+It verifies STARTTLS enforcement, HTTP `200` and `202` acceptance, retry after
+an HTTP `500`, corrupt-spool quarantine, and opt-in idempotency headers. The
+runner prints each scenario. Set `SMTP2WEB_TEST_KEEP=1` before the command to
+retain its temporary files when investigating a failure.
+
 ## Archive Compression
 
 Successfully delivered messages are archived by day under:
@@ -134,6 +156,9 @@ Successfully delivered messages are archived by day under:
 ```text
 /var/lib/smtp2web/archive/YYYY-MM-DD/
 ```
+
+Archive files are written atomically, so the compression timer only ever sees
+complete JSON payloads.
 
 The installed archive script is:
 
@@ -146,6 +171,11 @@ The systemd timer runs it daily. The script writes structured log lines to
 removes archive directories older than its configured retention window.
 
 ## Recovery And Replay
+
+smtp2web validates durable metadata, parsed mail structure, and TLS session
+metadata before forwarding. It does not require optional `From`, `To`, or
+`Subject` headers. Invalid or corrupt spool files go directly to quarantine;
+queue files from releases before schema versioning remain replayable.
 
 Archived JSON files can be replayed manually by copying them to the active spool
 directory:
@@ -171,3 +201,8 @@ sudo systemctl daemon-reload
 sudo su -s /bin/bash smtp2web -c 'cd /opt/smtp2web && npm ci --omit=dev'
 sudo systemctl restart smtp2web.service
 ```
+
+The installer preserves the existing `/etc/smtp2web/config.json`; it only
+installs the packaged example configuration on a new installation. Review the
+release changes and update the live configuration manually when new settings
+are introduced.

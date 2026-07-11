@@ -67,6 +67,27 @@ install_optional_file() {
   fi
 }
 
+# Configuration is operator-managed after the first installation. Install the
+# packaged example only when no live configuration exists; later installer runs
+# must not replace settings such as the forwarding endpoint or listener.
+install_default_file() {
+  source_path=$1
+  target_path=$2
+  owner=$3
+  group=$4
+  mode=$5
+
+  require_source "${source_path}"
+
+  if [ ! -e "${target_path}" ]; then
+    install -D -o "${owner}" -g "${group}" -m "${mode}" \
+      "${SRC_ROOT}/${source_path}" "${target_path}"
+  else
+    chown "${owner}:${group}" "${target_path}"
+    chmod "${mode}" "${target_path}"
+  fi
+}
+
 ensure_empty_file() {
   target_path=$1
   owner=$2
@@ -97,6 +118,8 @@ ensure_user
 ensure_dir /etc/smtp2web root "${APP_GROUP}" 750
 ensure_dir /etc/smtp2web/certs root "${APP_GROUP}" 750
 ensure_dir /opt/smtp2web "${APP_USER}" "${APP_GROUP}" 750
+ensure_dir /opt/smtp2web/test "${APP_USER}" "${APP_GROUP}" 750
+ensure_dir /opt/smtp2web/test/integration "${APP_USER}" "${APP_GROUP}" 750
 ensure_dir /var/log/smtp2web "${APP_USER}" adm 750
 ensure_empty_file /var/log/smtp2web/smtp2web.log "${APP_USER}" adm 640
 ensure_dir /var/lib/smtp2web "${APP_USER}" "${APP_GROUP}" 750
@@ -108,7 +131,7 @@ ensure_empty_file /var/lib/smtp2web/spool/failed/.keep "${APP_USER}" "${APP_GROU
 ensure_dir /var/lib/smtp2web/spool/quarantine "${APP_USER}" "${APP_GROUP}" 750
 ensure_empty_file /var/lib/smtp2web/spool/quarantine/.keep "${APP_USER}" "${APP_GROUP}" 640
 
-install_file etc/smtp2web/config.json /etc/smtp2web/config.json root "${APP_GROUP}" 640
+install_default_file etc/smtp2web/config.json /etc/smtp2web/config.json root "${APP_GROUP}" 640
 install_optional_file etc/smtp2web/certs/private.pem /etc/smtp2web/certs/private.pem root "${APP_GROUP}" 440
 install_optional_file etc/smtp2web/certs/public.pem /etc/smtp2web/certs/public.pem root "${APP_GROUP}" 640
 install_optional_file etc/smtp2web/certs/rootca.pem /etc/smtp2web/certs/rootca.pem root "${APP_GROUP}" 640
@@ -125,6 +148,9 @@ install_file opt/smtp2web/package-lock.json /opt/smtp2web/package-lock.json "${A
 install_file opt/smtp2web/queue.js /opt/smtp2web/queue.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/README.md /opt/smtp2web/README.md "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/server.js /opt/smtp2web/server.js "${APP_USER}" "${APP_GROUP}" 640
+install_file opt/smtp2web/test/validator-core.test.js /opt/smtp2web/test/validator-core.test.js "${APP_USER}" "${APP_GROUP}" 640
+install_file opt/smtp2web/test/integration/fake_gateway.py /opt/smtp2web/test/integration/fake_gateway.py "${APP_USER}" "${APP_GROUP}" 640
+install_file opt/smtp2web/test/integration/run.sh /opt/smtp2web/test/integration/run.sh "${APP_USER}" "${APP_GROUP}" 750
 install_file opt/smtp2web/validator-core.js /opt/smtp2web/validator-core.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/validator.js /opt/smtp2web/validator.js "${APP_USER}" "${APP_GROUP}" 640
 

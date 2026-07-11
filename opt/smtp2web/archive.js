@@ -1,5 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
+const crypto = require('crypto');
 const config = require('./config');
 
 async function archivePayload(payload) {
@@ -19,8 +20,21 @@ async function archivePayload(payload) {
     dir,
     `${ts.replace(/[:.]/g, '-')}_${id}.json`
   );
+  // Keep incomplete writes invisible to the compression timer. A rename within
+  // one directory is atomic, so the timer sees either no file or a complete
+  // JSON payload (it only processes files ending in .json).
+  const temporaryFile = path.join(
+    dir,
+    `.${path.basename(file)}.${process.pid}.${crypto.randomUUID()}.tmp`
+  );
 
-  await fs.writeFile(file, JSON.stringify(payload, null, 2));
+  try {
+    await fs.writeFile(temporaryFile, JSON.stringify(payload, null, 2));
+    await fs.rename(temporaryFile, file);
+  } catch (err) {
+    await fs.unlink(temporaryFile).catch(() => {});
+    throw err;
+  }
 }
 
 module.exports = { archivePayload };

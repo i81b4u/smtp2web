@@ -1,4 +1,5 @@
 const { simpleParser } = require('mailparser');
+const { SCHEMA_VERSION } = require('./validator-core');
 
 async function parseMail(buffer) {
   // mailparser turns the raw RFC 5322 message into a structured object with
@@ -19,6 +20,7 @@ async function parseMail(buffer) {
 
   return {
     meta: {
+      schemaVersion: SCHEMA_VERSION,
       receivedAt: new Date().toISOString()
     },
     mail
