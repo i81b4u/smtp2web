@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const config = require('./config');
 
-function archiveDayForTimestamp(timestamp, timezone) {
+function archiveDayForTimestamp(timestamp, timezone = 'UTC') {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
@@ -30,7 +30,7 @@ async function archivePayload(payload) {
   // receivedAt is assigned at SMTP acceptance and survives queue retries. Old
   // queue files may lack it, so retain the historical processing-time fallback.
   const archiveTimestamp = archiveTimestampForPayload(payload, ts);
-  const day = archiveDayForTimestamp(archiveTimestamp, config.archive.timezone);
+  const day = archiveDayForTimestamp(archiveTimestamp, config.archive.timezone ?? 'UTC');
   const dir = path.join(config.archive.path, day);
 
   await fs.mkdir(dir, { recursive: true });
