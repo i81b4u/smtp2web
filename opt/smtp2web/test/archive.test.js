@@ -27,6 +27,10 @@ test('archive day defaults to the existing UTC behavior when configured as UTC',
   assert.equal(archiveDayForTimestamp('2026-08-31T22:30:00.000Z', 'UTC'), '2026-08-31');
 });
 
+test('missing archive timezone preserves UTC archive bucketing', () => {
+  assert.equal(archiveDayForTimestamp('2026-08-31T22:30:00.000Z'), '2026-08-31');
+});
+
 test('archive bucketing uses the acceptance timestamp instead of processing time', () => {
   const receivedAt = '2026-08-31T21:59:59.000Z';
   const processingAt = '2026-08-31T22:30:00.000Z';
