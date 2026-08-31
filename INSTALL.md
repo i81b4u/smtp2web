@@ -65,6 +65,8 @@ At minimum, check:
 - `queue.failedPath`
 - `archive.enabled`
 - `archive.path`
+- `archive.timezone` (IANA archive calendar timezone)
+- `debug.saveRawMessages` and `debug.rawMessagePath`
 
 The default TLS certificate paths are:
 
@@ -181,6 +183,7 @@ Runtime data:
 /var/lib/smtp2web/spool/failed
 /var/lib/smtp2web/spool/quarantine
 /var/lib/smtp2web/archive
+/var/lib/smtp2web/debug
 ```
 
 Log rotation is installed at:
@@ -252,6 +255,18 @@ Successfully delivered messages are archived by day under:
 
 Archive files are written atomically, so the compression timer only ever sees
 complete JSON payloads.
+
+`archive.timezone` selects only the archive directory's local calendar day;
+durable timestamps remain UTC and the day comes from SMTP acceptance time.
+Configurations without it retain UTC bucketing.
+
+## Raw SMTP Debug Copies
+
+Enable `debug.saveRawMessages` only for controlled troubleshooting. It writes
+the complete, pre-parser SMTP DATA (including bodies and attachments) to unique
+`.eml` files under `debug.rawMessagePath`. The packaged path is
+`/var/lib/smtp2web/debug`, created as `0700`, with files set to `0600`. This can
+expose sensitive data; protect and remove copies appropriately.
 
 The installed archive script is:
 

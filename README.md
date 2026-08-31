@@ -19,6 +19,7 @@ The repository is laid out as a root-relative Linux filesystem tree plus
 /var/lib/smtp2web/spool/failed/
 /var/lib/smtp2web/spool/quarantine/
 /var/lib/smtp2web/archive/
+/var/lib/smtp2web/debug/
 /var/log/smtp2web/
 ```
 
@@ -86,6 +87,21 @@ enabled, archiving succeeds.
   replay. Retry metadata is reset, while a preserved `forwardedAt` marker
   prevents duplicate HTTP delivery after an archive-only failure.
 
+Queued payload metadata includes `smtpEnvelope.mailFrom` and
+`smtpEnvelope.rcptTo` when received from SMTP. These are the SMTP `MAIL FROM`
+and `RCPT TO` envelope, distinct from the optional RFC message `From:` header,
+which is never fabricated.
+
+## Raw SMTP Debug Copies
+
+Set `debug.saveRawMessages` to `true` to save the exact pre-parser SMTP DATA
+buffer as a unique `.eml` file in `debug.rawMessagePath`. The packaged path is
+`/var/lib/smtp2web/debug`; its directory is mode `0700` and files are `0600`.
+Write failures are logged but do not reject otherwise deliverable mail.
+
+This stores complete email content and attachments. Enable it only for
+controlled troubleshooting and protect and remove the data appropriately.
+
 ## HTTP Delivery Semantics
 
 By default, smtp2web provides at-least-once delivery: any HTTP 2xx response,
@@ -121,6 +137,12 @@ Delivered messages are archived by date under:
 
 Archive files are written atomically, so the compression timer only ever sees
 complete JSON payloads.
+
+`archive.timezone` is an IANA timezone used only for the `YYYY-MM-DD` archive
+directory (the packaged configuration uses `Europe/Amsterdam`). Timestamps
+such as `meta.receivedAt` remain UTC. Bucketing uses that SMTP acceptance time,
+avoiding retry and midnight races. Existing configuration without this setting
+retains UTC bucketing.
 
 `/usr/local/bin/zip-smtp2web-archives.sh` compresses archived JSON files into
 date-local zip files and removes archive directories older than its retention

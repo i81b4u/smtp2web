@@ -2,6 +2,7 @@ const { SMTPServer } = require('smtp-server');
 const fs = require('fs');
 const config = require('./config');
 const { parseMail } = require('./mail');
+const { saveRawMessageIfEnabled } = require('./debug');
 const { enqueue, startQueueProcessor } = require('./queue');
 const { ensureTlsCertificates } = require('./certs');
 const logger = require('./logger');
@@ -97,14 +98,34 @@ const server = new SMTPServer({
       if (finished) return;
 
       try {
-        // The message is now within the configured size limit, so parse it,
-        // attach SMTP session metadata, and hand it to the durable queue.
+        // The message is now within the configured size limit. Preserve this
+        // exact SMTP DATA buffer before parsing when debugging is enabled.
         const buffer = Buffer.concat(chunks);
+        if (config.debug.saveRawMessages) {
+          try {
+            const file = await saveRawMessageIfEnabled(config.debug, buffer);
+            logger.info('smtp', 'debug', 'raw message saved', { file });
+          } catch (err) {
+            // Debug persistence must be visible to operators, but must not
+            // reject otherwise deliverable SMTP traffic.
+            logger.error('smtp', 'debug', 'raw message could not be saved', {
+              remote: session.remoteAddress,
+              error: err.message
+            });
+          }
+        }
+
+        // Parse the message, attach SMTP session metadata, and hand it to the
+        // durable queue.
         const payload = await parseMail(buffer);
 
         payload.session = {
           remoteAddress: session.remoteAddress,
           tls: session.secure
+        };
+        payload.meta.smtpEnvelope = {
+          mailFrom: session.envelope?.mailFrom?.address,
+          rcptTo: session.envelope?.rcptTo?.map(recipient => recipient.address) || []
         };
 
         logger.info('smtp', 'receive', 'connection initiated', {
