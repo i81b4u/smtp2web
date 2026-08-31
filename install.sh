@@ -125,6 +125,7 @@ ensure_empty_file /var/log/smtp2web/smtp2web.log "${APP_USER}" adm 640
 ensure_dir /var/lib/smtp2web "${APP_USER}" "${APP_GROUP}" 750
 ensure_dir /var/lib/smtp2web/archive "${APP_USER}" "${APP_GROUP}" 750
 ensure_empty_file /var/lib/smtp2web/archive/.keep "${APP_USER}" "${APP_GROUP}" 640
+ensure_dir /var/lib/smtp2web/debug "${APP_USER}" "${APP_GROUP}" 700
 ensure_dir /var/lib/smtp2web/spool "${APP_USER}" "${APP_GROUP}" 750
 ensure_dir /var/lib/smtp2web/spool/failed "${APP_USER}" "${APP_GROUP}" 750
 ensure_empty_file /var/lib/smtp2web/spool/failed/.keep "${APP_USER}" "${APP_GROUP}" 640
@@ -139,6 +140,7 @@ install_optional_file etc/smtp2web/certs/rootca.pem /etc/smtp2web/certs/rootca.p
 install_file opt/smtp2web/archive.js /opt/smtp2web/archive.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/certs.js /opt/smtp2web/certs.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/config.js /opt/smtp2web/config.js "${APP_USER}" "${APP_GROUP}" 640
+install_file opt/smtp2web/debug.js /opt/smtp2web/debug.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/forwarder.js /opt/smtp2web/forwarder.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/INSTALL.md /opt/smtp2web/INSTALL.md "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/logger.js /opt/smtp2web/logger.js "${APP_USER}" "${APP_GROUP}" 640
@@ -149,6 +151,8 @@ install_file opt/smtp2web/queue.js /opt/smtp2web/queue.js "${APP_USER}" "${APP_G
 install_file opt/smtp2web/README.md /opt/smtp2web/README.md "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/server.js /opt/smtp2web/server.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/test/validator-core.test.js /opt/smtp2web/test/validator-core.test.js "${APP_USER}" "${APP_GROUP}" 640
+install_file opt/smtp2web/test/debug.test.js /opt/smtp2web/test/debug.test.js "${APP_USER}" "${APP_GROUP}" 640
+install_file opt/smtp2web/test/archive.test.js /opt/smtp2web/test/archive.test.js "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/test/integration/fake_gateway.py /opt/smtp2web/test/integration/fake_gateway.py "${APP_USER}" "${APP_GROUP}" 640
 install_file opt/smtp2web/test/integration/run.sh /opt/smtp2web/test/integration/run.sh "${APP_USER}" "${APP_GROUP}" 750
 install_file opt/smtp2web/validator-core.js /opt/smtp2web/validator-core.js "${APP_USER}" "${APP_GROUP}" 640

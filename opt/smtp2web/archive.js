@@ -3,13 +3,34 @@ const path = require('path');
 const crypto = require('crypto');
 const config = require('./config');
 
+function archiveDayForTimestamp(timestamp, timezone) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(timestamp));
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function archiveTimestampForPayload(payload, fallbackTimestamp) {
+  const receivedAt = payload?.meta?.receivedAt;
+  return typeof receivedAt === 'string' && !Number.isNaN(Date.parse(receivedAt))
+    ? receivedAt
+    : fallbackTimestamp;
+}
+
 async function archivePayload(payload) {
   // When enabled, archiving stores successfully forwarded messages by day so
   // retention/compression scripts can work on whole date directories.
   if (!config.archive?.enabled) return;
 
   const ts = new Date().toISOString();
-  const day = ts.slice(0, 10); // YYYY-MM-DD
+  // receivedAt is assigned at SMTP acceptance and survives queue retries. Old
+  // queue files may lack it, so retain the historical processing-time fallback.
+  const archiveTimestamp = archiveTimestampForPayload(payload, ts);
+  const day = archiveDayForTimestamp(archiveTimestamp, config.archive.timezone);
   const dir = path.join(config.archive.path, day);
 
   await fs.mkdir(dir, { recursive: true });
@@ -37,4 +58,4 @@ async function archivePayload(payload) {
   }
 }
 
-module.exports = { archivePayload };
+module.exports = { archivePayload, archiveDayForTimestamp, archiveTimestampForPayload };

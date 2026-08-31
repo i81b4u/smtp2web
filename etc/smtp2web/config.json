@@ -41,7 +41,13 @@
 
   "archive": {
     "enabled": true,
-    "path": "/var/lib/smtp2web/archive"
+    "path": "/var/lib/smtp2web/archive",
+    "timezone": "Europe/Amsterdam"
+  },
+
+  "debug": {
+    "saveRawMessages": false,
+    "rawMessagePath": "/var/lib/smtp2web/debug"
   },
 
   "log": {
